@@ -23,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
 
     ListView listView;
     private List<Map<String, String>> dataSource;
+    private SimpleAdapter simpleAdapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,13 +39,27 @@ public class MainActivity extends AppCompatActivity {
             temp.put("text", "hahahahhaha");
             dataSource.add(temp);
         }
-        SimpleAdapter simpleAdapter = new SimpleAdapter(this, dataSource, R.layout.item, new String[] {"text"}, new int[] {R.id.textview});
+        simpleAdapter = new SimpleAdapter(this, dataSource, R.layout.item, new String[] {"text"}, new int[] {R.id.textview});
         listView.setAdapter(simpleAdapter);
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                ListenHelper.listen(MainActivity.this);
+//                ListenHelper.listen(MainActivity.this);
+                final int position = i;
+                ListenHelper.setOnResultListener(MainActivity.this, new ListenHelper.OnResultListener() {
+                    @Override
+                    public void onResult(String fileId, String result) {
+
+                        ListenHelper.showTip(MainActivity.this, ListenHelper.getListenerPath(fileId));
+                        dataSource.get(position).put("text", result);
+                        simpleAdapter.notifyDataSetChanged();
+
+                        ListenHelper.playListener(ListenHelper.getListenerPath(fileId));
+
+                    }
+                });
+
             }
         });
     }
