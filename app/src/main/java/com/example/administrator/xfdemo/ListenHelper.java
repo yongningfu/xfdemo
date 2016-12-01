@@ -2,10 +2,12 @@ package com.example.administrator.xfdemo;
 
 import android.content.Context;
 import android.media.MediaPlayer;
+import android.os.Bundle;
 import android.os.Environment;
 import android.widget.Toast;
 
 import com.example.administrator.xfdemo.utils.JsonParser;
+import com.iflytek.cloud.RecognizerListener;
 import com.iflytek.cloud.RecognizerResult;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
@@ -95,6 +97,7 @@ public class ListenHelper {
     //因为listen接收数据异步，所以定义一个监听回调形式接口
     public interface OnResultListener {
         public void onResult(String fileId, String result);
+        public void onError(String errorMsg);
     }
 
     public static void setOnResultListener(final Context context, final OnResultListener onResultListener) {
@@ -153,4 +156,74 @@ public class ListenHelper {
 
         }
     }
+
+
+    //没有系统对话框的录音
+    //返回穿件的录音对象 用于给用户控制是否关闭录音 和释放资源
+
+    public static SpeechRecognizer setOnResultListenerWithNoDialog(final Context context, final OnResultListener onResultListener) {
+        //创建无系统动画对象
+        SpeechRecognizer mIat = SpeechRecognizer.createRecognizer(context, null);
+//        RecognizerDialog mDialog = new RecognizerDialog(context, null);
+
+        mIat.setParameter(SpeechConstant.LANGUAGE, "zh_cn");
+        mIat.setParameter(SpeechConstant.ACCENT, "mandarin");
+
+        // 设置语音前端点:静音超时时间，即用户多长时间不说话则当做超时处理
+        mIat.setParameter(SpeechConstant.VAD_BOS, "60000");
+
+        // 设置语音后端点:后端点静音检测时间，即用户停止说话多长时间内即认为不再输入， 自动停止录音
+        mIat.setParameter(SpeechConstant.VAD_EOS, "60000");
+
+
+        // 设置音频保存路径，保存音频格式支持pcm、wav，设置路径为sd卡请注意WRITE_EXTERNAL_STORAGE权限
+        // 注：AUDIO_FORMAT参数语记需要更新版本才能生效
+        mIat.setParameter(SpeechConstant.AUDIO_FORMAT,"wav");
+        final UUID id = UUID.randomUUID();
+        mIat.setParameter(SpeechConstant.ASR_AUDIO_PATH,  getListenersDirectory() + id.toString() + ".wav");
+
+        mIat.startListening(new RecognizerListener() {
+
+            private String finalResults = "";
+            @Override
+            public void onVolumeChanged(int i, byte[] bytes) {
+
+            }
+
+            @Override
+            public void onBeginOfSpeech() {
+
+            }
+
+            @Override
+            public void onEndOfSpeech() {
+
+            }
+
+            @Override
+            public void onResult(RecognizerResult recognizerResult, boolean isLast) {
+                //语音听写的结果 需要拼接
+                finalResults += parseResult(recognizerResult);
+                if (isLast) {
+                    onResultListener.onResult(id.toString(), finalResults);
+                }
+
+            }
+
+            @Override
+            public void onError(SpeechError speechError) {
+//                showTip(context, speechError.getPlainDescription(true));
+                onResultListener.onError(speechError.getPlainDescription(true));
+            }
+
+            @Override
+            public void onEvent(int i, int i1, int i2, Bundle bundle) {
+
+            }
+        });
+
+
+        return mIat;
+    }
+
 }
