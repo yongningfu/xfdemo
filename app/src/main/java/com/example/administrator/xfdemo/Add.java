@@ -20,6 +20,28 @@ public class Add extends AppCompatActivity {
     private Button send;
     private String filePath = null;
     private String transText = null;
+
+
+    SpeechRecognizer mIat;
+    Handler handler = new Handler();
+    Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            //停止
+            mIat.stopListening();
+
+            //停止的话 讯飞里面可能有个不断发生请求的过程 不会立即onError 所以需要设置一下提示信息
+            //前面关网络 中途开网络的话 它也是能识别的
+            ListenHelper.showTip(Add.this,  "分析中");
+            speack.setImageResource(R.drawable.microphone);
+        }
+    };
+
+    // 开始 idle -> 加载录音-> record -> 成功-stop
+    //                                -> 失败 idle
+    enum STATE {IDLE, RECORD, STOP};
+    private STATE state = STATE.IDLE;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -29,56 +51,50 @@ public class Add extends AppCompatActivity {
         voiceText = (EditText) findViewById(R.id.voiceText);
         send = (Button) findViewById(R.id.send);
 
+
         //点击speack 开始录音
         speack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
-//                ListenHelper.setOnResultListener(Add.this, new ListenHelper.OnResultListener() {
-//                    @Override
-//                    public void onResult(String fileId, String result) {
-//                        ListenHelper.showTip(Add.this, ListenHelper.getListenerPath(fileId));
-//                        voiceText.setText(result);
-//                        filePath = ListenHelper.getListenerPath(fileId);
-//                        transText = result;
-//                    }
-//                });
+                // 空闲就生成一个录音对象
+                if (state == STATE.IDLE) {
 
-                speack.setImageResource(R.drawable.playing);
-               final SpeechRecognizer mIat =  ListenHelper.setOnResultListenerWithNoDialog(Add.this, new ListenHelper.OnResultListener() {
-                    @Override
-                    public void onResult(String fileId, String result) {
-                        ListenHelper.showTip(Add.this, ListenHelper.getListenerPath(fileId));
-                        voiceText.setText(result);
-                        filePath = ListenHelper.getListenerPath(fileId);
-                        transText = result;
-                    }
+                    handler.removeCallbacks(runnable);
 
-                   @Override
-                   public void onError(String errorMsg) {
-                       ListenHelper.showTip(Add.this, errorMsg + "哈哈哈 出错啦");
-                       speack.setImageResource(R.drawable.microphone);
-                   }
-               });
+                    state = STATE.RECORD;
+                    speack.setImageResource(R.drawable.playing);
+                    mIat =  ListenHelper.setOnResultListenerWithNoDialog(Add.this, new ListenHelper.OnResultListener() {
+                        @Override
+                        public void onResult(String fileId, String result) {
 
+                            if (state == STATE.RECORD) {
+                                state = STATE.STOP;
+                                speack.setImageResource(R.drawable.microphone);
+                                ListenHelper.showTip(Add.this, ListenHelper.getListenerPath(fileId));
+                                voiceText.setText(result);
+                                filePath = ListenHelper.getListenerPath(fileId);
+                                transText = result;
+                            }
+                        }
 
-                Handler handler = new Handler();
-                Runnable runnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        //停止
-                        mIat.stopListening();
-                        ListenHelper.showTip(Add.this,  "stop 这里");
-                        speack.setImageResource(R.drawable.microphone);
-                    }
-                };
+                        @Override
+                        public void onError(String errorMsg) {
+                            state = STATE.IDLE;
+                            speack.setImageResource(R.drawable.microphone);
+                            ListenHelper.showTip(Add.this, errorMsg + "哈哈哈 出错啦");
 
-                handler.postDelayed(runnable, 70000);
+                        }
+                    });
 
 
+                } else if (state == STATE.RECORD) {
 
+                    handler.postDelayed(runnable, 0);
 
-
+                } else if (state == STATE.STOP){
+                    ListenHelper.showTip(Add.this, "已经录完了");
+                }
 
             }
         });

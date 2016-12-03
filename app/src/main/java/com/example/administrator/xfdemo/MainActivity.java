@@ -1,6 +1,7 @@
 package com.example.administrator.xfdemo;
 
 import android.content.Intent;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -27,6 +28,9 @@ public class MainActivity extends AppCompatActivity {
     ListView listView;
     private List<Map<String, String>> dataSource;
     private SimpleAdapter simpleAdapter;
+    private SwipeRefreshLayout refresh;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,6 +40,34 @@ public class MainActivity extends AppCompatActivity {
         ListenHelper.Init(this);
 
         listView = (ListView) findViewById(R.id.listview);
+        refresh = (SwipeRefreshLayout) findViewById(R.id.refresh);
+        refresh.setColorSchemeResources(android.R.color.holo_blue_bright,
+                android.R.color.holo_green_light, android.R.color.holo_orange_light);
+
+        refresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                //设置2秒的时间来执行以下事件
+                ListenHelper.showTip(MainActivity.this, "刷新一下");
+                refresh.setRefreshing(false);
+
+//                new Handler().postDelayed(new Runnable() {
+//                    public void run() {
+//                        data.add(0, "刷新后新增的item");
+//                        adapter.notifyDataSetChanged();
+//                        swiperereshlayout.setRefreshing(false);
+//                    }
+//                }, 2000);
+            }
+        });
+
+
+
+
+
+
+
+
         add = (Button) findViewById(R.id.add);
         dataSource = new ArrayList<Map<String, String>>();
 
